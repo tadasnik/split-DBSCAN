@@ -1,12 +1,16 @@
+#!/usr/bin/env python
+"""Perform sklearn DBSCAN clustering in chunks and merge the results
+author: tadasnik
+"""
 import numpy as np
 from sklearn.cluster import DBSCAN
 from sklearn.preprocessing import LabelEncoder
 
 
 def normalize_labels(labels: np.ndarray, labels_increment: int) -> np.ndarray:
-    """Normalize labels and increment by labels_increment but preserving -1s."""
+    """Normalize labels and increment by labels_increment but preserve -1s."""
     if labels.min() < -1:
-        raise ValueError("Labels con not contain values < -1")
+        raise ValueError("Labels can not contain values < -1")
     label_encoder = LabelEncoder()
     labels_norm = label_encoder.fit_transform(labels)
     if labels.min() == -1:
