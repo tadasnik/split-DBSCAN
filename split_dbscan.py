@@ -119,7 +119,7 @@ class SplitDBSCAN(DBSCAN):
     def active_mask(self, chunk: np.ndarray) -> np.ndarray[bool]:
         """Splits clusters into completed and active parts.
         The group membership of active points may change when
-        clustering the following chunk or with influx of new data.
+        clustering the following chunk.
 
         Parameters
         ----------
@@ -133,7 +133,7 @@ class SplitDBSCAN(DBSCAN):
         # chunk_edge represents max value in chunk along the
         # split_dimension
         chunk_edge = chunk[:, self.split_dim].max()
-        # whithin reach is a mask of samples which are within edge_eps
+        # whithin reach is a mask of samples which are < edge_eps
         # distance from the chunk edge
         within_reach = chunk[:, self.split_dim] >= (chunk_edge - self.edge_eps)
         # unique labels of all within reach samples
