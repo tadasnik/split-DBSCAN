@@ -69,6 +69,42 @@ class SplitDBSCAN(cluster.DBSCAN):
         self.split_dim = split_dim
         self.chunk_size = chunk_size
 
+    def X_index_labels_array(self, X):
+        """TODO not used yet"""
+        # Create a structured array to store X index and cluster labels
+        self.inds = np.zeros((X.shape[0],), [("index", int), ("labels", int)])
+        if not np.all(X[:, self.split_dim][:-1] <= X[:, self.split_dim][1:]):
+            self.inds["index"] = X[:, self.split_dim].argsort()
+        else:
+            self.inds["index"] = np.arange(X.shape[0])
+        self.inds["labels"] = -1
+
+    def split_indices(self):
+        """TODO not used yet"""
+        chunk_n = int(np.ceil(len(self.inds) / self.chunk_size))
+        # split the index array into chunks
+        chunks = np.array_split(np.arange(len(self.inds["index"])), chunk_n, axis=0)
+        chunk_start_end = [(x[0], x[-1]) for x in chunks]
+        return chunk_start_end
+
+    def fit_wrapper(self, X):
+        """TODO not used yet"""
+        self.X_index_labels_array(X)
+        chunk_start_end = self.split_indices()
+        for chunk_number, (start, end) in enumerate(chunk_start_end, 1):
+            eps_start = start
+            if chunk_number > 1:
+                chunk_edge = X[self.inds["index"][start]][self.split_dim]
+                # Determine overlap points scale (extend) eps overlap by min_samples
+                eps_edge = chunk_edge - self.eps * self.min_samples
+                eps_start = np.searchsorted(
+                    X[:, 0], eps_edge, sorter=self.inds["index"], side="right"
+                )
+            chunk_index = self.inds["index"][eps_start : end + 1]
+            # chunk = X[inds['index'][start:end]]
+            super().fit(X[chunk_index])
+ 
+
     def fit(self, X: np.ndarray):
         """A method for performing self clustering in chunks
 
@@ -85,7 +121,6 @@ class SplitDBSCAN(cluster.DBSCAN):
         inds = np.zeros((X.shape[0],), [("index", int), ("labels", int)])
 
         if not np.all(X[:, self.split_dim][:-1] <= X[:, self.split_dim][1:]):
-            print("not sorted")
             inds["index"] = X[:, self.split_dim].argsort()
         else:
             inds["index"] = np.arange(X.shape[0])
@@ -107,7 +142,7 @@ class SplitDBSCAN(cluster.DBSCAN):
                 )
             chunk_index = inds["index"][eps_start : end + 1]
             # chunk = X[inds['index'][start:end]]
-            self.fit(X[chunk_index])
+            super().fit(X[chunk_index])
             if (chunk_number > 1) and (eps_start != start):
                 eps_old = inds[eps_start:start]
                 temp = np.zeros((eps_old.shape[0],), [("index", int), ("labels", int)])
@@ -159,17 +194,16 @@ class SplitDBSCAN(cluster.DBSCAN):
                             values = values[ind_start]
                         # sort_idx = np.argsort(keys)
                         idx = np.searchsorted(keys, self.labels_)
-
                         idx[idx == len(values)] = 0
                         mask = keys[idx] == self.labels_
                         labels = np.where(mask, values[idx], self.labels_)
                         if not np.all(mask):
                             labels[~mask] = normalize_labels(
-                                labels[~mask], inds["labels"].max()
+                                labels[~mask], inds["labels"].max() + 1
                             )
                         # check for repeated keys and relabel merged clustersn
                     else:
-                        labels = normalize_labels(self.labels_, inds["labels"].max())
+                        labels = normalize_labels(self.labels_, inds["labels"].max() + 1)
                     inds["labels"][eps_start : end + 1][~mask_to_1s] = labels[
                         ~mask_to_1s
                     ]
@@ -177,7 +211,6 @@ class SplitDBSCAN(cluster.DBSCAN):
                     inds["labels"][start : end + 1] = self.labels_
             else:
                 inds["labels"][start : end + 1] = self.labels_
-
         self.labels_ = inds["labels"].astype(int)
 
     def active_mask(self, chunk: np.ndarray) -> np.ndarray[bool]:
