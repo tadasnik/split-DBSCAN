@@ -17,7 +17,7 @@ def normalize_labels(labels: np.ndarray, labels_increment) -> np.ndarray:
     mask = labels != -1
     label_encoder = LabelEncoder()
     labels_transformed = label_encoder.fit_transform(labels[mask])
-    #mask_1s = labels != -1
+    # mask_1s = labels != -1
     assert labels_transformed is not None
     labels_transformed += labels_increment
     labels_norm[mask] = labels_transformed
@@ -25,12 +25,12 @@ def normalize_labels(labels: np.ndarray, labels_increment) -> np.ndarray:
 
 
 class SplitDBSCAN(cluster.DBSCAN):
-    """Extends sklearn self to enable chunked clustering
+    """Extends sklearn.cluster.DBSCAN to enable chunked clustering
 
     Parameters
     ----------
 
-    self parameters, plus:
+    DBSCAN parameters, plus:
 
     edge_eps : float, default=0.5
         The threashold distance between any sample (point) of the cluster
@@ -103,10 +103,9 @@ class SplitDBSCAN(cluster.DBSCAN):
             chunk_index = self.inds["index"][eps_start : end + 1]
             # chunk = X[inds['index'][start:end]]
             super().fit(X[chunk_index])
- 
 
     def fit(self, X: np.ndarray):
-        """A method for performing self clustering in chunks
+        """A method for performing sklearn.cluster.DBSCAN clustering in chunks
 
         Parameters
         ----------
@@ -119,7 +118,7 @@ class SplitDBSCAN(cluster.DBSCAN):
 
         # Create a structured array to store X index and cluster labels
         inds = np.zeros((X.shape[0],), [("index", int), ("labels", int)])
-
+        # Check if X sorted along split_dim, and if not create a sorted index
         if not np.all(X[:, self.split_dim][:-1] <= X[:, self.split_dim][1:]):
             inds["index"] = X[:, self.split_dim].argsort()
         else:
@@ -162,7 +161,7 @@ class SplitDBSCAN(cluster.DBSCAN):
                     selected = merged[merged["labels1"] == -1]
 
                     mask_to_1s = np.isin(
-                        inds["index"][eps_start : end + 1], selected["index"]
+                        inds["index"][eps_start: end + 1], selected["index"]
                     )
                     merged = merged[merged["labels1"] != -1]
                     if len(merged) > 0:
@@ -182,7 +181,7 @@ class SplitDBSCAN(cluster.DBSCAN):
                             # perhaps could be vectorised if slow for large number of clusters.
                             for repeat_ind in ind_start[count > 1]:
                                 r_values = values[
-                                    repeat_ind : repeat_ind + count[repeat_ind]
+                                    repeat_ind: repeat_ind + count[repeat_ind]
                                 ]
                                 for rep_value in r_values[1:]:
                                     inds["labels"][
@@ -203,14 +202,16 @@ class SplitDBSCAN(cluster.DBSCAN):
                             )
                         # check for repeated keys and relabel merged clustersn
                     else:
-                        labels = normalize_labels(self.labels_, inds["labels"].max() + 1)
-                    inds["labels"][eps_start : end + 1][~mask_to_1s] = labels[
+                        labels = normalize_labels(
+                            self.labels_, inds["labels"].max() + 1
+                        )
+                    inds["labels"][eps_start: end + 1][~mask_to_1s] = labels[
                         ~mask_to_1s
                     ]
                 else:
-                    inds["labels"][start : end + 1] = self.labels_
+                    inds["labels"][start: end + 1] = self.labels_
             else:
-                inds["labels"][start : end + 1] = self.labels_
+                inds["labels"][start: end + 1] = self.labels_
         self.labels_ = inds["labels"].astype(int)
 
     def active_mask(self, chunk: np.ndarray) -> np.ndarray[bool]:
