@@ -100,7 +100,7 @@ class SplitDBSCAN(cluster.DBSCAN):
                 eps_start = np.searchsorted(
                     X[:, 0], eps_edge, sorter=self.inds["index"], side="right"
                 )
-            chunk_index = self.inds["index"][eps_start : end + 1]
+            chunk_index = self.inds["index"][eps_start: end + 1]
             # chunk = X[inds['index'][start:end]]
             super().fit(X[chunk_index])
 
